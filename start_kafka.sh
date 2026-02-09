@@ -1,4 +1,4 @@
-#!/bin/bashx
+#!/bin/bash
 
 echo "Starting Zookeeper..."
 ~/kafka/bin/zookeeper-server-start.sh -daemon ~/kafka/config/zookeeper.properties

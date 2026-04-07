@@ -12,20 +12,20 @@ spark = SparkSession.builder \
 kafka_df = spark.readStream \
     .format("kafka") \
     .option("kafka.bootstrap.servers", "localhost:9092") \
-    .option("subscribe", "fraudTopic") \  # ✅ FIXED
+    .option("subscribe", "fraudTopic") \
     .option("startingOffsets", "earliest") \
     .load()
 
 # ---------------- Convert Kafka value ----------------
 json_df = kafka_df.selectExpr("CAST(value AS STRING) as raw_data")
 
-# ---------------- UPDATED SCHEMA ----------------
+# ---------------- Schema ----------------
 schema = StructType([
     StructField("Time", DoubleType()),
     StructField("Amount", DoubleType()),
     StructField("Class", DoubleType()),
-    StructField("event_time", DoubleType()),   # ✅ NEW
-    StructField("ingestion_time", StringType()) # ✅ NEW
+    StructField("event_time", DoubleType()),
+    StructField("ingestion_time", StringType())
 ])
 
 # ---------------- Parse JSON ----------------
@@ -41,8 +41,7 @@ bronze_query = bronze_df.writeStream \
     .outputMode("append") \
     .start()
 
-# ---------------- SILVER LAYER (TABLEAU READY) ----------------
-
+# ---------------- SILVER LAYER ----------------
 silver_df = bronze_df.select(
     col("Time").alias("event_time"),
     col("Amount").alias("amount"),
@@ -50,9 +49,13 @@ silver_df = bronze_df.select(
     to_timestamp(col("ingestion_time")).alias("ingestion_ts")
 )
 
+# ✅ ADD DATA VALIDATION HERE (IMPORTANT)
+silver_df = silver_df.filter(col("amount").isNotNull())
+
+# ---------------- WRITE SILVER ----------------
 silver_query = silver_df.writeStream \
     .format("parquet") \
-    .partitionBy("class") \   # ✅ PARTITIONING
+    .partitionBy("class") \
     .option("path", "/data/fraud/silver/") \
     .option("checkpointLocation", "/data/fraud/checkpoints/silver/") \
     .outputMode("append") \

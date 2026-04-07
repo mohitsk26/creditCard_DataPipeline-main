@@ -29,6 +29,10 @@ sleep 5
 echo "📤 Starting Kafka Producer..."
 
 python3 producer.py > producer.log 2>&1 &
+sleep 10
+
+echo "📊 Syncing Hive partitions..."
+hive -e "USE fraud_db; MSCK REPAIR TABLE fraud_silver;"
 
 PRODUCER_PID=$!
 

@@ -1,19 +1,42 @@
 #!/bin/bash
 
+KAFKA_HOME=~/kafka
+BOOTSTRAP_SERVER=localhost:9092
+TOPIC=fraudTopic
+
+PARTITIONS=3
+REPLICATION_FACTOR=1   # keep 1 for local, but explain 3 in interview
+
 echo "Checking if topic exists..."
 
-EXISTS=$( ~/kafka/bin/kafka-topics.sh \
+EXISTS=$($KAFKA_HOME/bin/kafka-topics.sh \
   --list \
-  --bootstrap-server localhost:9092 | grep -w fraudTopic)
+  --bootstrap-server $BOOTSTRAP_SERVER | grep -w $TOPIC)
 
-if [ "$EXISTS" == "fraudTopic" ]; then
-    echo "Topic already exists."
+if [ "$EXISTS" == "$TOPIC" ]; then
+    echo "✅ Topic already exists."
 else
-    echo "Creating topic fraudTopic..."
-        ~/kafka/bin/kafka-topics.sh \
-      --bootstrap-server localhost:9092 \
+    echo "Creating topic $TOPIC..."
+
+    $KAFKA_HOME/bin/kafka-topics.sh \
+      --bootstrap-server $BOOTSTRAP_SERVER \
       --create \
-      --topic fraudTopic \
-      --partitions 1 \
-      --replication-factor 1
+      --topic $TOPIC \
+      --partitions $PARTITIONS \
+      --replication-factor $REPLICATION_FACTOR \
+      --config retention.ms=604800000 \
+      --config segment.ms=86400000
+
+    if [ $? -ne 0 ]; then
+        echo "❌ Failed to create topic"
+        exit 1
+    fi
+
+    echo "✅ Topic created successfully"
 fi
+
+echo "Verifying topic..."
+$KAFKA_HOME/bin/kafka-topics.sh \
+  --describe \
+  --bootstrap-server $BOOTSTRAP_SERVER \
+  --topic $TOPIC
